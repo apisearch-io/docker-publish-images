@@ -4,13 +4,9 @@ Script for publishing images to DockerHub
 ``` sh
 #!/bin/bash
 
-mv .env /tmp/.env-apisearch-for-deploying
-rm -Rf .ppm
-git stash
 git checkout master
 git pull origin master
 rm -Rf vendor
-rm -Rf var
 cps install --no-dev
 for branch in $(git branch --list | grep -Eo "^\s*docker-image/(.*)"); do
     VERSION=$(echo "$branch" | cut -d/ -f2)
@@ -21,6 +17,7 @@ for branch in $(git branch --list | grep -Eo "^\s*docker-image/(.*)"); do
     git rebase master
     git log master..$branch
     git diff master..$branch
+    rm -Rf Tests
     read -p "Ready to push (y/n)?" choice
     case "$choice" in
         y|Y ) echo "Let's push it";;
@@ -28,13 +25,12 @@ for branch in $(git branch --list | grep -Eo "^\s*docker-image/(.*)"); do
         * ) echo "invalid";;
     esac
     git push --force origin $branch
-    rm -Rf Tests
     docker build -t "$CONTAINER_NAME" .
     docker tag $CONTAINER_NAME:latest $IMAGE_NAME
     docker push $IMAGE_NAME
-    git checkout Tests
+    git checkout -- Tests
 done
 git checkout master
+git reset --hard HEAD
 cps install --dev
-mv /tmp/.env-apisearch-for-deploying .env
 ```
